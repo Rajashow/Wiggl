@@ -7,8 +7,9 @@
   <script>
     const ROOM_ID = "<%= roomId %>"
   </script>
-  <script defer src="https://unpkg.com/peerjs@1.2.0/dist/peerjs.min.js"></script>
+  <script defer src="https://unpkg.com/peerjs@1.2.0/dist/peerjs.min.js" defer></script>
   <script src="/socket.io/socket.io.js" defer></script>
+  <!-- <script src="./peerjs.min.js" defer></script> -->
   <script src="script.js" defer></script>
   <title>Document</title>
   <style>
@@ -17,7 +18,7 @@
       grid-template-columns: repeat(auto-fill, 300px);
       grid-auto-rows: 300px;
     }
-    
+
     video {
       width: 100%;
       height: 100%;
