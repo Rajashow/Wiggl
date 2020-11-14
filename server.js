@@ -1,40 +1,38 @@
 const express = require("express");
+const http = require("http");
 const app = express();
-const server = require("http").Server(app);
-const io = require("socket.io")(server);
-const hostname = "127.0.0.1";
-const port = 3000;
-const { v4: uuidV4 } = require("uuid");
+const server = http.createServer(app);
+const socket = require("socket.io");
+const io = socket(server);
 
-app.get("/", (req, res) => {
-  res.redirect(`/${uuidV4()}`);
-});
+const rooms = {};
 
-/** returns website title?
-redirects to root websit?
-gets request to uuid? is it for random rooms for users?*/
-app.get("/", (req, res) => {
-  res.redirect(`/${uuidV4()}`);
-});
-
-/** Redirects to different rooms as well? */
-app.get("/:room", (req, res) => {
-  res.render("room", { roomId: req.params.room });
-});
-
-/** socket.io IO */
-io.on("connection", (socket) => {
-  socket.on("join-room", (roomId, userId) => {
-    socket.join(roomId);
-    socket.to(roomId).broadcast.emit("user-connected", userId);
-
-    socket.on("disconnect", () => {
-      socket.to(roomId).broadcast.emit("user-disconnected", userId);
+io.on("connection", socket => {
+    socket.on("join room", roomID => {
+        if (rooms[roomID]) {
+            rooms[roomID].push(socket.id);
+        } else {
+            rooms[roomID] = [socket.id];
+        }
+        const otherUser = rooms[roomID].find(id => id !== socket.id);
+        if (otherUser) {
+            socket.emit("other user", otherUser);
+            socket.to(otherUser).emit("user joined", socket.id);
+        }
     });
-  });
+
+    socket.on("offer", payload => {
+        io.to(payload.target).emit("offer", payload);
+    });
+
+    socket.on("answer", payload => {
+        io.to(payload.target).emit("answer", payload);
+    });
+
+    socket.on("ice-candidate", incoming => {
+        io.to(incoming.target).emit("ice-candidate", incoming.candidate);
+    });
 });
 
-/** choose a port */
-server.listen(port, () => {
-  console.log(`Server running at http://${hostname}:${port}/`);
-});
+
+server.listen(8000, () => console.log('server is running on port 8000'));
