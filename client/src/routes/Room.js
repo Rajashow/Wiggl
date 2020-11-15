@@ -1,7 +1,9 @@
 import io from "socket.io-client";
 import * as bodyPix from "@tensorflow-models/body-pix";
 import React, { useRef, useEffect } from "react";
+// import takitaki from ".";
 
+let net = null;
 const Room = (props) => {
   const userVideo = useRef();
   const socketRef = useRef();
@@ -9,18 +11,26 @@ const Room = (props) => {
   const peerRef = useRef();
   const otherUser = useRef();
   const userStream = useRef();
+
   const canvas1 = <canvas id="c2" />;
   const v3 = (
-    <video id="hidden_vid" autoPlay src="https://i.imgur.com/sRqLSbt.mp4" />
+    <video
+      autoPlay
+      id="hidden_vid"
+      src="https://i.imgur.com/sRqLSbt.mp4"
+      //   src="takitaki.mp4"
+      //   src="https://www.w3schools.com/html/mov_bbb.mp4"
+      crossOrigin="Anonymous"
+    />
   );
   const v1 = <video autoPlay ref={userVideo} />;
   const v2 = <video autoPlay ref={partnerVideo} />;
   //   const net = bodyPix.load();
 
   async function draw(playbackVideo, canvas, opacity) {
+    playbackVideo.play();
     const OUTPUT_STRIDE = 16;
     const SEGMENTATION_THRESHOLD = 0.5;
-    const net = await bodyPix.load();
     const RAINBOW = [
       [110, 64, 170],
       [106, 72, 183],
@@ -47,20 +57,15 @@ const Room = (props) => {
       [134, 245, 88],
       [155, 243, 88],
     ];
-    const partSegment = net.segmentPersonParts(
+    // if (net != null) {
+    net = await bodyPix.load();
+    // }
+    const partSegment = await net.segmentPersonParts(
       playbackVideo,
       OUTPUT_STRIDE,
       SEGMENTATION_THRESHOLD
     );
-    const foregroundColor = { r: 255, g: 255, b: 255, a: 255 };
-    const backgroundColor = { r: 0, g: 0, b: 0, a: 255 };
     const pixelCellWidth = 10.0;
-    // const mask = bodyPix.toMask(
-    //   partSegment,
-    //   foregroundColor,
-    //   backgroundColor,
-    //   true
-    // );
 
     const colorParts = bodyPix.toColoredPartMask(partSegment, RAINBOW);
     bodyPix.drawPixelatedMask(
@@ -72,7 +77,7 @@ const Room = (props) => {
       true,
       pixelCellWidth
     );
-    bodyPix.drawMask(canvas, playbackVideo, colorParts, opacity);
+    // bodyPix.drawMask(canvas, playbackVideo, colorParts, opacity);
   }
   function callUser(userID) {
     peerRef.current = createPeer(userID);
@@ -198,10 +203,22 @@ const Room = (props) => {
       });
 
     var playbackVideo = document.getElementById("hidden_vid");
-    playbackVideo.style.display = "hidden";
+    // playbackVideo.style.display = "none";
     playbackVideo.width = 640;
     playbackVideo.height = 480;
-    draw(playbackVideo, document.getElementById("c2"), 0.7);
+    var refreshID = null;
+    playbackVideo.onloadeddata = function () {
+      refreshID = setInterval(function () {
+        draw(playbackVideo, document.getElementById("c2"), 0.7);
+      }, 100);
+    };
+    playbackVideo.addEventListener(
+      "ended",
+      () => {
+        clearInterval(refreshID);
+      },
+      false
+    );
     // extractFramesFromVideo("https://i.imgur.com/sRqLSbt.mp4");
   }, []);
 
