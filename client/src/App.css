@@ -12,10 +12,15 @@ body {
   margin: auto;
 }
 canvas {
-  margin-top: 10%;
+  margin-top: 5%;
   border-radius: 5%;
   margin-right: 10px;
   border: black;
+}
+#score {
+  color: white;
+  margin-top: 1%;
+  font-size: 50px;
 }
 button {
   margin: 0;

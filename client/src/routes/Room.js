@@ -406,6 +406,7 @@ const Room = (props) => {
             });
           });
           console.log("Score for player 1: " + score1);
+          document.getElementById("score").innerHTML = "Score:" + score1;
           /*
           TODO: draw a second person and account for their score
           var pose2 = drawDance(otherPlaybackVideo, document.getElementById("c3"), opacity);
@@ -421,12 +422,15 @@ const Room = (props) => {
 
   return (
     <div className="Game_row">
-      {v1}
-      {v2}
-      {v3}
-      {canvas1}
-      {canvas2}
-      {canvas3}
+      <p id="score"></p>
+      <div>
+        {v2}
+        {v3}
+        {canvas1}
+        {canvas2}
+        {canvas3}
+        {v1}
+      </div>
     </div>
   );
 };
