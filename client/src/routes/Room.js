@@ -4,24 +4,23 @@ import React, { useRef, useEffect } from "react";
 
 const Room = (props) => {
   const userVideo = useRef();
+  const socketRef = useRef();
   const partnerVideo = useRef();
   const peerRef = useRef();
-  const socketRef = useRef();
   const otherUser = useRef();
   const userStream = useRef();
-  const net = bodyPix.load();
-  async function getPartSegmentation(img) {
+  const canvas1 = <canvas id="c2" />;
+  const v3 = (
+    <video id="hidden_vid" autoPlay src="https://i.imgur.com/sRqLSbt.mp4" />
+  );
+  const v1 = <video autoPlay ref={userVideo} />;
+  const v2 = <video autoPlay ref={partnerVideo} />;
+  //   const net = bodyPix.load();
+
+  async function draw(playbackVideo, canvas, opacity) {
     const OUTPUT_STRIDE = 16;
     const SEGMENTATION_THRESHOLD = 0.5;
-
-    return net.estimatePartSegmentation(
-      img,
-      OUTPUT_STRIDE,
-      SEGMENTATION_THRESHOLD
-    );
-  }
-
-  function getColoredParts(partSegmentation) {
+    const net = await bodyPix.load();
     const RAINBOW = [
       [110, 64, 170],
       [106, 72, 183],
@@ -48,61 +47,33 @@ const Room = (props) => {
       [134, 245, 88],
       [155, 243, 88],
     ];
-    return net.toColoredPartImageData(partSegmentation, RAINBOW);
+    const partSegment = net.segmentPersonParts(
+      playbackVideo,
+      OUTPUT_STRIDE,
+      SEGMENTATION_THRESHOLD
+    );
+    const foregroundColor = { r: 255, g: 255, b: 255, a: 255 };
+    const backgroundColor = { r: 0, g: 0, b: 0, a: 255 };
+    const pixelCellWidth = 10.0;
+    // const mask = bodyPix.toMask(
+    //   partSegment,
+    //   foregroundColor,
+    //   backgroundColor,
+    //   true
+    // );
+
+    const colorParts = bodyPix.toColoredPartMask(partSegment, RAINBOW);
+    bodyPix.drawPixelatedMask(
+      canvas,
+      playbackVideo,
+      colorParts,
+      opacity,
+      0,
+      true,
+      pixelCellWidth
+    );
+    bodyPix.drawMask(canvas, playbackVideo, colorParts, opacity);
   }
-
-  function drawColorOnCanvas(canvas, img, coloredPart, opacity) {
-    bodyPix.drawMask(canvas, img, coloredPart, opacity);
-  }
-
-  async function extractFramesFromVideo(videoUrl, fps = 25) {
-    return new Promise(async (resolve) => {
-      // fully download it first (no buffering):
-      let videoBlob = await fetch(videoUrl).then((r) => r.blob());
-      let videoObjectUrl = URL.createObjectURL(videoBlob);
-      let video = document.createElement("video");
-
-      let seekResolve;
-      video.addEventListener("seeked", async function () {
-        if (seekResolve) seekResolve();
-      });
-
-      video.src = videoObjectUrl;
-
-      // workaround chromium metadata bug (https://stackoverflow.com/q/38062864/993683)
-      while (
-        (video.duration === Infinity || isNaN(video.duration)) &&
-        video.readyState < 2
-      ) {
-        await new Promise((r) => setTimeout(r, 1000));
-        video.currentTime = 10000000 * Math.random();
-      }
-      let duration = video.duration;
-
-      let canvas = document.createElement("canvas");
-      let context = canvas.getContext("2d");
-      let [w, h] = [video.videoWidth, video.videoHeight];
-      canvas.width = w;
-      canvas.height = h;
-
-      let frames = [];
-      let interval = 1 / fps;
-      let currentTime = 0;
-
-      while (currentTime < duration) {
-        video.currentTime = currentTime;
-        await new Promise((r) => (seekResolve = r));
-
-        context.drawImage(video, 0, 0, w, h);
-        let base64ImageData = canvas.toDataURL();
-        frames.push(base64ImageData);
-
-        currentTime += interval;
-      }
-      resolve(frames);
-    });
-  }
-
   function callUser(userID) {
     peerRef.current = createPeer(userID);
     userStream.current
@@ -225,12 +196,69 @@ const Room = (props) => {
 
         socketRef.current.on("ice-candidate", handleNewICECandidateMsg);
       });
+
+    var playbackVideo = document.getElementById("hidden_vid");
+    playbackVideo.style.display = "hidden";
+    playbackVideo.width = 640;
+    playbackVideo.height = 480;
+    draw(playbackVideo, document.getElementById("c2"), 0.7);
+    // extractFramesFromVideo("https://i.imgur.com/sRqLSbt.mp4");
   }, []);
 
+  //   async function extractFramesFromVideo(videoUrl, fps = 1) {
+  //     return new Promise(async (resolve) => {
+  //       // fully download it first (no buffering):
+  //       let videoBlob = await fetch(videoUrl).then((r) => r.blob());
+  //       let videoObjectUrl = URL.createObjectURL(videoBlob);
+  //       let hiddenv1 = document.createElement("video");
+  //       let seekResolve;
+  //       hiddenv1.addEventListener("seeked", async function () {
+  //         if (seekResolve) seekResolve();
+  //       });
+
+  //       hiddenv1.src = videoObjectUrl;
+
+  //       // workaround chromium metadata bug (https://stackoverflow.com/q/38062864/993683)
+  //       while (
+  //         (hiddenv1.duration === Infinity || isNaN(hiddenv1.duration)) &&
+  //         hiddenv1.readyState < 2
+  //       ) {
+  //         await new Promise((r) => setTimeout(r, 1000));
+  //         hiddenv1.currentTime = 10000000 * Math.random();
+  //       }
+  //       let duration = hiddenv1.duration;
+  //       let canvas = document.getElementById("c2");
+  //       let context = canvas.getContext("2d");
+  //       let [w, h] = [hiddenv1.videoWidth, hiddenv1.videoHeight];
+  //       canvas.width = w;
+  //       canvas.height = h;
+
+  //       let frames = [];
+  //       let interval = 1 / fps;
+  //       let currentTime = 0;
+
+  //       while (currentTime < duration) {
+  //         hiddenv1.currentTime = currentTime;
+  //         await new Promise((r) => (seekResolve = r));
+
+  //         context.drawImage(hiddenv1, 0, 0, w, h);
+  //         const newImg = document.getElementById("bob");
+  //         // newImg.src = canvas.toDataURL();
+  //         draw(newImg, canvas, 0.7);
+  //         let base64ImageData = canvas.toDataURL();
+  //         frames.push(base64ImageData);
+
+  //         currentTime += interval;
+  //       }
+  //       resolve(frames);
+  //     });
+  //   }
   return (
     <div>
-      <video autoPlay ref={userVideo} />
-      <video autoPlay ref={partnerVideo} />
+      {v1}
+      {v2}
+      {v3}
+      {canvas1}
     </div>
   );
 };
