@@ -8,6 +8,15 @@ body {
   height: 40vmin;
   pointer-events: none;
 }
+.Game_row {
+  margin: auto;
+}
+canvas {
+  margin-top: 10%;
+  border-radius: 5%;
+  margin-right: 10px;
+  border: black;
+}
 button {
   margin: 0;
   position: absolute;

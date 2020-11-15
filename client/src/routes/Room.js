@@ -48,11 +48,13 @@ const Room = (props) => {
   const canvas2 = <canvas id="c2" />;
   const canvas3 = <canvas id="c3" />;
 
+  // style={{ display: "none" }}
   const v1 = (
-    <video style={{ display: "none" }} id="me" autoPlay ref={userVideo} />
+    <video id="me" style={{ display: "none" }} autoPlay ref={userVideo} />
   );
+  //
   const v2 = (
-    <video style={{ display: "none" }} id="other" autoPlay ref={partnerVideo} />
+    <video id="other" style={{ display: "none" }} autoPlay ref={partnerVideo} />
   );
   const v3 = (
     <video
@@ -87,7 +89,7 @@ const Room = (props) => {
       if (typeof partSegment == "undefined") {
         return null;
       } else {
-        return partSegment['allPoses'][0];
+        return partSegment["allPoses"][0];
       }
     } else {
       return null;
@@ -102,8 +104,8 @@ const Room = (props) => {
         },
         {
           urls: "turn:numb.viagenie.ca",
-          credential: "muazkh",
-          username: "webrtc@live.com",
+          credential: "Wbcxpc9LD56Md3B",
+          username: " homer_almdar@tuesdaymovo.com",
         },
       ],
     });
@@ -177,7 +179,7 @@ const Room = (props) => {
 
   function calculateScoreForPose(referencePose, userPose) {
     function dotProduct(x1, y1, x2, y2) {
-      return (x1 * x2) + (y1 * y2);
+      return x1 * x2 + y1 * y2;
     }
     // Math time!
     var poses = new Array(referencePose.keypoints.length);
@@ -189,125 +191,142 @@ const Room = (props) => {
     // Get the average of both wireframes' x and y values
     var i;
     for (i = 0; i < poses.length; i++) {
-        poses[i] = [referencePose.keypoints[i], userPose.keypoints[i]];
-        //console.log(poses[i][0]['position']['x'])
-        referenceXTotal += poses[i][0]['position']['x'];
-        referenceYTotal += poses[i][0]['position']['y'];
-        userXTotal += poses[i][1]['position']['x'];
-        userYTotal += poses[i][1]['position']['x'];
+      poses[i] = [referencePose.keypoints[i], userPose.keypoints[i]];
+      //console.log(poses[i][0]['position']['x'])
+      referenceXTotal += poses[i][0]["position"]["x"];
+      referenceYTotal += poses[i][0]["position"]["y"];
+      userXTotal += poses[i][1]["position"]["x"];
+      userYTotal += poses[i][1]["position"]["x"];
     }
 
-    const referenceXMean = referenceXTotal / poses.length
-    const referenceYMean = referenceYTotal / poses.length
-    const userXMean = userXTotal / poses.length
-    const userYMean = userYTotal / poses.length
+    const referenceXMean = referenceXTotal / poses.length;
+    const referenceYMean = referenceYTotal / poses.length;
+    const userXMean = userXTotal / poses.length;
+    const userYMean = userYTotal / poses.length;
 
     // Standardize these so that the positions are centered around (0,0)
     var standardizedPoses = new Array(poses.length);
 
     for (i = 0; i < poses.length; i++) {
-        standardizedPoses[i] = 
-        [
-            {
-                'whichPose': 'reference', 'part': poses[i][0]['part'], 'position': 
-                {
-                    'x': poses[i][0]['position']['x'] - referenceXMean, 'y': poses[i][0]['position']['y'] - referenceYMean
-                }
-            },
-            {
-                'whichPose': 'user', 'part': poses[i][1]['part'], 'position': 
-                {
-                    'x': poses[i][1]['position']['x'] - userXMean, 'y': poses[i][1]['position']['y'] - userYMean
-                }
-            }
-        ];
+      standardizedPoses[i] = [
+        {
+          whichPose: "reference",
+          part: poses[i][0]["part"],
+          position: {
+            x: poses[i][0]["position"]["x"] - referenceXMean,
+            y: poses[i][0]["position"]["y"] - referenceYMean,
+          },
+        },
+        {
+          whichPose: "user",
+          part: poses[i][1]["part"],
+          position: {
+            x: poses[i][1]["position"]["x"] - userXMean,
+            y: poses[i][1]["position"]["y"] - userYMean,
+          },
+        },
+      ];
     }
-    
+
     //console.log(standardizedPoses);
 
     // Now normalize these vectors
     var normalizedPoses = new Array(poses.length);
 
     for (i = 0; i < poses.length; i++) {
-        var [referenceXValue, referenceYValue] = [standardizedPoses[i][0]['position']['x'], standardizedPoses[i][0]['position']['y']];
-        var referenceVectorMagnitude = Math.sqrt(Math.pow(referenceXValue, 2) + Math.pow(referenceYValue, 2));
-        var [referenceNormalizedX, referenceNormalizedY] = [referenceXValue / referenceVectorMagnitude, referenceYValue / referenceVectorMagnitude];
+      var [referenceXValue, referenceYValue] = [
+        standardizedPoses[i][0]["position"]["x"],
+        standardizedPoses[i][0]["position"]["y"],
+      ];
+      var referenceVectorMagnitude = Math.sqrt(
+        Math.pow(referenceXValue, 2) + Math.pow(referenceYValue, 2)
+      );
+      var [referenceNormalizedX, referenceNormalizedY] = [
+        referenceXValue / referenceVectorMagnitude,
+        referenceYValue / referenceVectorMagnitude,
+      ];
 
-        var [userXValue, userYValue] = [standardizedPoses[i][1]['position']['x'], standardizedPoses[i][1]['position']['y']];
-        var userVectorMagnitude = Math.sqrt(Math.pow(userXValue, 2) + Math.pow(userYValue, 2));
-        var [userNormalizedX, userNormalizedY] = [userXValue / userVectorMagnitude, userYValue / userVectorMagnitude];
-        
+      var [userXValue, userYValue] = [
+        standardizedPoses[i][1]["position"]["x"],
+        standardizedPoses[i][1]["position"]["y"],
+      ];
+      var userVectorMagnitude = Math.sqrt(
+        Math.pow(userXValue, 2) + Math.pow(userYValue, 2)
+      );
+      var [userNormalizedX, userNormalizedY] = [
+        userXValue / userVectorMagnitude,
+        userYValue / userVectorMagnitude,
+      ];
 
-        normalizedPoses[i] = 
-        { 
-            'referencePose': 
-            {
-                'part': standardizedPoses[i][0]['part'], 'position': 
-                    {
-                        'x': referenceNormalizedX, 'y': referenceNormalizedY
-                    }
-            },
-            'userPose':
-            {
-                'part': standardizedPoses[i][1]['part'], 'position': 
-                    {
-                        'x': userNormalizedX, 'y': userNormalizedY
-                    }
-            }
-        }
+      normalizedPoses[i] = {
+        referencePose: {
+          part: standardizedPoses[i][0]["part"],
+          position: {
+            x: referenceNormalizedX,
+            y: referenceNormalizedY,
+          },
+        },
+        userPose: {
+          part: standardizedPoses[i][1]["part"],
+          position: {
+            x: userNormalizedX,
+            y: userNormalizedY,
+          },
+        },
+      };
     }
     //console.log(normalizedPoses)
 
     /*
-      * The positions are now all the same magnitude and centered around (0,0).
-      * Take the dot product to get the angle between the vectors, that tells you how
-      * close one wireframe is to another
-      * 
-      * Trying to do so in a way that is efficient and concise!
-      */
+     * The positions are now all the same magnitude and centered around (0,0).
+     * Take the dot product to get the angle between the vectors, that tells you how
+     * close one wireframe is to another
+     *
+     * Trying to do so in a way that is efficient and concise!
+     */
 
-      var dotproductTotal = 0;
-      var mA = 0;
-      var mB = 0;
-      for (i = 0; i < normalizedPoses.length; i++) {
-          var aX = normalizedPoses[i]['referencePose']['position']['x'];
-          var aY = normalizedPoses[i]['referencePose']['position']['y'];
-          var bX = normalizedPoses[i]['userPose']['position']['x'];
-          var bY = normalizedPoses[i]['userPose']['position']['y'];
-          
-          dotproductTotal += dotProduct(aX, aY, bX, bY);
-          mA += Math.sqrt((aX * aX) + (aY * aY));
-          mB += Math.sqrt((bX * bX) + (bY * bY));
-      }
-      mA = Math.sqrt(mA);
-      mB = Math.sqrt(mB);
-      /*
-      * The higher this value, the more similar the user pose is to the the reference pose.
-      * ~.95 is a perfect score
-      */
-      var similarity = (dotproductTotal) / ((mA) * (mB));
+    var dotproductTotal = 0;
+    var mA = 0;
+    var mB = 0;
+    for (i = 0; i < normalizedPoses.length; i++) {
+      var aX = normalizedPoses[i]["referencePose"]["position"]["x"];
+      var aY = normalizedPoses[i]["referencePose"]["position"]["y"];
+      var bX = normalizedPoses[i]["userPose"]["position"]["x"];
+      var bY = normalizedPoses[i]["userPose"]["position"]["y"];
 
-      // Need to provide a "score" given different levels of similarity
+      dotproductTotal += dotProduct(aX, aY, bX, bY);
+      mA += Math.sqrt(aX * aX + aY * aY);
+      mB += Math.sqrt(bX * bX + bY * bY);
+    }
+    mA = Math.sqrt(mA);
+    mB = Math.sqrt(mB);
+    /*
+     * The higher this value, the more similar the user pose is to the the reference pose.
+     * ~.95 is a perfect score
+     */
+    var similarity = dotproductTotal / (mA * mB);
 
-      const PERFECT = .95;
-      const GREAT = .9;
-      const GOOD = .85;
-      const OK = .8;
+    // Need to provide a "score" given different levels of similarity
 
-      var score;
-      if (similarity >= PERFECT) {
-        score = 1000;
-      } else if (similarity >= GREAT) {
-        score = 750;
-      } else if (similarity >= GOOD) {
-        score = 500;
-      } else if (similarity >= OK) {
-        score = 300;
-      } else {
-        score = 0;
-      }
-      console.log(similarity)
-      return score;
+    const PERFECT = 0.95;
+    const GREAT = 0.9;
+    const GOOD = 0.85;
+    const OK = 0.8;
+
+    var score;
+    if (similarity >= PERFECT) {
+      score = 1000;
+    } else if (similarity >= GREAT) {
+      score = 750;
+    } else if (similarity >= GOOD) {
+      score = 500;
+    } else if (similarity >= OK) {
+      score = 300;
+    } else {
+      score = 0;
+    }
+    console.log(similarity);
+    return score;
   }
 
   function handleNewICECandidateMsg(incoming) {
@@ -359,20 +378,31 @@ const Room = (props) => {
         vid.height = 480;
       };
       if (!ran_once) {
-        ran_once = true;
         setInterval(function () {
           var mePlaybackVideo = document.getElementById("me");
           var otherPlaybackVideo = document.getElementById("other");
           var dancePlaybackVideo = document.getElementById("dance_hidden");
-          init_video(dancePlaybackVideo);
-          init_video(mePlaybackVideo);
-          init_video(otherPlaybackVideo);
+          if (!ran_once) {
+            ran_once = true;
+            init_video(dancePlaybackVideo);
+            init_video(mePlaybackVideo);
+            init_video(otherPlaybackVideo);
+          }
+
           let opacity = 1;
-          drawDance(mePlaybackVideo, document.getElementById("c1"), opacity).then((pose1) => {
-            drawDance(dancePlaybackVideo, document.getElementById("c2"), opacity).then((referencePose) => {
-                if (pose1 != null && referencePose != null) {
-                  score1 += calculateScoreForPose(referencePose, pose1);
-                }
+          drawDance(
+            mePlaybackVideo,
+            document.getElementById("c1"),
+            opacity
+          ).then((pose1) => {
+            drawDance(
+              dancePlaybackVideo,
+              document.getElementById("c2"),
+              opacity
+            ).then((referencePose) => {
+              if (pose1 != null && referencePose != null) {
+                score1 += calculateScoreForPose(referencePose, pose1);
+              }
             });
           });
           console.log("Score for player 1: " + score1);
@@ -383,14 +413,14 @@ const Room = (props) => {
             score2 += calculateScoreForPose(referencePose, pose2);
             console.log("Score for player 2: " + score2)    ;
           }
-          */    
+          */
         }, 200);
       }
     });
   }, []);
 
   return (
-    <div>
+    <div className="Game_row">
       {v1}
       {v2}
       {v3}
