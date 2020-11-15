@@ -30703,12 +30703,12 @@ function isMobile() {
 
 async function getVideoInputs() {
   if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
-    console.log('enumerateDevices() not supported.');
+    console.log("enumerateDevices() not supported.");
     return [];
   }
 
   const devices = await navigator.mediaDevices.enumerateDevices();
-  const videoDevices = devices.filter(device => device.kind === 'videoinput');
+  const videoDevices = devices.filter(device => device.kind === "videoinput");
   return videoDevices;
 }
 
@@ -30740,13 +30740,13 @@ async function getDeviceIdForLabel(cameraLabel) {
 
 function getFacingMode(cameraLabel) {
   if (!cameraLabel) {
-    return 'user';
+    return "user";
   }
 
-  if (cameraLabel.toLowerCase().includes('back')) {
-    return 'environment';
+  if (cameraLabel.toLowerCase().includes("back")) {
+    return "environment";
   } else {
-    return 'user';
+    return "user";
   }
 }
 
@@ -30760,7 +30760,6 @@ async function getConstraints(cameraLabel) {
     facingMode = isMobile() ? getFacingMode(cameraLabel) : null;
   }
 
-  ;
   return {
     deviceId,
     facingMode
@@ -30783,15 +30782,15 @@ function stopExistingVideoFeedCapture() {
 
 async function setupCamera(cameraLabel) {
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    throw new Error('Browser API navigator.mediaDevices.getUserMedia not available');
+    throw new Error("Browser API navigator.mediaDevices.getUserMedia not available");
   }
 
-  const videoElement = document.getElementById('video');
+  const videoElement = document.getElementById("video");
   stopExistingVideoCapture();
   const videoConstraints = await getConstraints(cameraLabel);
   const stream = await navigator.mediaDevices.getUserMedia({
-    'audio': false,
-    'video': videoConstraints
+    audio: false,
+    video: videoConstraints
   });
   videoElement.srcObject = stream;
   return new Promise(resolve => {
@@ -30808,9 +30807,9 @@ async function loadVideo(cameraLabel) {
     //document.getElementById('video2')
     state.video = await setupCamera(cameraLabel);
   } catch (e) {
-    let info = document.getElementById('info');
-    info.textContent = 'this browser does not support video capture,' + 'or this device does not have a camera';
-    info.style.display = 'block';
+    let info = document.getElementById("info");
+    info.textContent = "this browser does not support video capture," + "or this device does not have a camera";
+    info.style.display = "block";
     throw e;
   }
 
@@ -30832,22 +30831,22 @@ async function loadVideo(cameraLabel) {
 }
 
 const defaultQuantBytes = 2;
-const defaultMobileNetMultiplier = isMobile() ? 0.50 : 0.75;
+const defaultMobileNetMultiplier = isMobile() ? 0.5 : 0.75;
 const defaultMobileNetStride = 16;
-const defaultMobileNetInternalResolution = 'medium';
+const defaultMobileNetInternalResolution = "medium";
 const defaultResNetMultiplier = 1.0;
 const defaultResNetStride = 16;
-const defaultResNetInternalResolution = 'low';
+const defaultResNetInternalResolution = "low";
 const guiState = {
-  algorithm: 'multi-person-instance',
-  estimate: 'partmap',
+  algorithm: "multi-person-instance",
+  estimate: "partmap",
   camera: null,
   flipHorizontal: true,
   input: {
-    architecture: 'MobileNetV1',
+    architecture: "MobileNetV1",
     outputStride: 16,
-    internalResolution: 'low',
-    multiplier: 0.50,
+    internalResolution: "low",
+    multiplier: 0.5,
     quantBytes: 2
   },
   multiPersonDecoding: {
@@ -30859,7 +30858,7 @@ const guiState = {
   },
   segmentation: {
     segmentationThreshold: 0.7,
-    effect: 'mask',
+    effect: "mask",
     maskBackground: true,
     opacity: 0.7,
     backgroundBlurAmount: 3,
@@ -30867,8 +30866,8 @@ const guiState = {
     edgeBlurAmount: 3
   },
   partMap: {
-    colorScale: 'rainbow',
-    effect: 'partMap',
+    colorScale: "rainbow",
+    effect: "partMap",
     segmentationThreshold: 0.5,
     opacity: 0.9,
     blurBodyPartAmount: 3,
@@ -30898,17 +30897,17 @@ function setupGui(cameras) {
   let architectureController = null;
 
   guiState[_demo_util.TRY_RESNET_BUTTON_NAME] = function () {
-    architectureController.setValue('ResNet50');
+    architectureController.setValue("ResNet50");
   };
 
   gui.add(guiState, _demo_util.TRY_RESNET_BUTTON_NAME).name(_demo_util.TRY_RESNET_BUTTON_TEXT);
   (0, _demo_util.updateTryResNetButtonDatGuiCss)();
-  gui.add(guiState, 'camera', toCameraOptions(cameras)).onChange(async function (cameraLabel) {
+  gui.add(guiState, "camera", toCameraOptions(cameras)).onChange(async function (cameraLabel) {
     state.changingCamera = true;
     await loadVideo(cameraLabel);
     state.changingCamera = false;
   });
-  gui.add(guiState, 'flipHorizontal'); // There are two algorithms 'person' and 'multi-person-instance'.
+  gui.add(guiState, "flipHorizontal"); // There are two algorithms 'person' and 'multi-person-instance'.
   // The 'person' algorithm returns one single segmentation mask (or body
   // part map) for all people in the image. The 'multi-person-instance'
   // algorithm returns an array of segmentation mask (or body part map).
@@ -30916,12 +30915,12 @@ function setupGui(cameras) {
   // words, 'multi-person-instance' algorithm does instance-level person
   // segmentation and body part segmentation for every person in the image.
 
-  const algorithmController = gui.add(guiState, 'algorithm', ['person', 'multi-person-instance']); // Architecture: there are a few BodyPix models varying in size and
+  const algorithmController = gui.add(guiState, "algorithm", ["person", "multi-person-instance"]); // Architecture: there are a few BodyPix models varying in size and
   // accuracy.
   // The input parameters have the most effect on accuracy and speed of the
   // network
 
-  let input = gui.addFolder('Input'); // Updates outputStride
+  let input = gui.addFolder("Input"); // Updates outputStride
   // Output stride:  Internally, this parameter affects the height and width
   // of the layers in the neural network. The lower the value of the output
   // stride the higher the accuracy but slower the speed, the higher the
@@ -30935,7 +30934,7 @@ function setupGui(cameras) {
     }
 
     guiState.input.outputStride = outputStride;
-    outputStrideController = input.add(guiState.input, 'outputStride', outputStrideArray);
+    outputStrideController = input.add(guiState.input, "outputStride", outputStrideArray);
     outputStrideController.onChange(function (outputStride) {
       state.changingStride = true;
       guiState.input.outputStride = +outputStride;
@@ -30954,7 +30953,7 @@ function setupGui(cameras) {
     }
 
     guiState.input.internalResolution = internalResolution;
-    internalResolutionController = input.add(guiState.input, 'internalResolution', internalResolutionArray);
+    internalResolutionController = input.add(guiState.input, "internalResolution", internalResolutionArray);
     internalResolutionController.onChange(function (internalResolution) {
       guiState.input.internalResolution = internalResolution;
     });
@@ -30973,7 +30972,7 @@ function setupGui(cameras) {
     }
 
     guiState.input.multiplier = multiplier;
-    multiplierController = input.add(guiState.input, 'multiplier', multiplierArray);
+    multiplierController = input.add(guiState.input, "multiplier", multiplierArray);
     multiplierController.onChange(function (multiplier) {
       state.changingMultiplier = true;
       guiState.input.multiplier = +multiplier;
@@ -30995,7 +30994,7 @@ function setupGui(cameras) {
 
     guiState.quantBytes = +quantBytes;
     guiState.input.quantBytes = +quantBytes;
-    quantBytesController = input.add(guiState.input, 'quantBytes', quantBytesArray);
+    quantBytesController = input.add(guiState.input, "quantBytes", quantBytesArray);
     quantBytesController.onChange(function (quantBytes) {
       state.changingQuantBytes = true;
       guiState.input.quantBytes = +quantBytes;
@@ -31003,13 +31002,13 @@ function setupGui(cameras) {
   }
 
   function updateGuiInputSection() {
-    if (guiState.input.architecture === 'MobileNetV1') {
-      updateGuiInternalResolution(defaultMobileNetInternalResolution, ['low', 'medium', 'high', 'full']);
+    if (guiState.input.architecture === "MobileNetV1") {
+      updateGuiInternalResolution(defaultMobileNetInternalResolution, ["low", "medium", "high", "full"]);
       updateGuiOutputStride(defaultMobileNetStride, [8, 16]);
-      updateGuiMultiplier(defaultMobileNetMultiplier, [0.50, 0.75, 1.0]);
+      updateGuiMultiplier(defaultMobileNetMultiplier, [0.5, 0.75, 1.0]);
     } else {
       // guiState.input.architecture === "ResNet50"
-      updateGuiInternalResolution(defaultResNetInternalResolution, ['low', 'medium', 'high', 'full']);
+      updateGuiInternalResolution(defaultResNetInternalResolution, ["low", "medium", "high", "full"]);
       updateGuiOutputStride(defaultResNetStride, [32, 16]);
       updateGuiMultiplier(defaultResNetMultiplier, [1.0]);
     }
@@ -31020,7 +31019,7 @@ function setupGui(cameras) {
   // fastest, but least accurate.
 
 
-  architectureController = input.add(guiState.input, 'architecture', ['ResNet50', 'MobileNetV1']);
+  architectureController = input.add(guiState.input, "architecture", ["ResNet50", "MobileNetV1"]);
   guiState.architecture = guiState.input.architecture;
   architectureController.onChange(function (architecture) {
     // if architecture is ResNet50, then show ResNet50 options
@@ -31030,25 +31029,25 @@ function setupGui(cameras) {
   });
   updateGuiInputSection();
   input.open();
-  const estimateController = gui.add(guiState, 'estimate', ['segmentation', 'partmap']);
-  let segmentation = gui.addFolder('Segmentation');
-  segmentation.add(guiState.segmentation, 'segmentationThreshold', 0.0, 1.0);
-  const segmentationEffectController = segmentation.add(guiState.segmentation, 'effect', ['mask', 'bokeh']);
-  let multiPersonDecoding = gui.addFolder('MultiPersonDecoding');
-  multiPersonDecoding.add(guiState.multiPersonDecoding, 'maxDetections', 0, 20, 1);
-  multiPersonDecoding.add(guiState.multiPersonDecoding, 'scoreThreshold', 0.0, 1.0);
-  multiPersonDecoding.add(guiState.multiPersonDecoding, 'nmsRadius', 0, 30, 1);
-  multiPersonDecoding.add(guiState.multiPersonDecoding, 'numKeypointForMatching', 1, 17, 1);
-  multiPersonDecoding.add(guiState.multiPersonDecoding, 'refineSteps', 1, 10, 1);
+  const estimateController = gui.add(guiState, "estimate", ["segmentation", "partmap"]);
+  let segmentation = gui.addFolder("Segmentation");
+  segmentation.add(guiState.segmentation, "segmentationThreshold", 0.0, 1.0);
+  const segmentationEffectController = segmentation.add(guiState.segmentation, "effect", ["mask", "bokeh"]);
+  let multiPersonDecoding = gui.addFolder("MultiPersonDecoding");
+  multiPersonDecoding.add(guiState.multiPersonDecoding, "maxDetections", 0, 20, 1);
+  multiPersonDecoding.add(guiState.multiPersonDecoding, "scoreThreshold", 0.0, 1.0);
+  multiPersonDecoding.add(guiState.multiPersonDecoding, "nmsRadius", 0, 30, 1);
+  multiPersonDecoding.add(guiState.multiPersonDecoding, "numKeypointForMatching", 1, 17, 1);
+  multiPersonDecoding.add(guiState.multiPersonDecoding, "refineSteps", 1, 10, 1);
   multiPersonDecoding.open();
   algorithmController.onChange(function (value) {
     switch (guiState.algorithm) {
-      case 'single-person':
+      case "single-person":
         multiPersonDecoding.close();
         singlePersonDecoding.open();
         break;
 
-      case 'multi-person':
+      case "multi-person":
         singlePersonDecoding.close();
         multiPersonDecoding.open();
         break;
@@ -31060,7 +31059,7 @@ function setupGui(cameras) {
   let maskBlurAmount;
   let maskBackground;
   segmentationEffectController.onChange(function (effectType) {
-    if (effectType === 'mask') {
+    if (effectType === "mask") {
       if (bokehBlurAmount) {
         bokehBlurAmount.remove();
       }
@@ -31069,10 +31068,10 @@ function setupGui(cameras) {
         edgeBlurAmount.remove();
       }
 
-      darknessLevel = segmentation.add(guiState.segmentation, 'opacity', 0.0, 1.0);
-      maskBlurAmount = segmentation.add(guiState.segmentation, 'maskBlurAmount').min(0).max(20).step(1);
-      maskBackground = segmentation.add(guiState.segmentation, 'maskBackground');
-    } else if (effectType === 'bokeh') {
+      darknessLevel = segmentation.add(guiState.segmentation, "opacity", 0.0, 1.0);
+      maskBlurAmount = segmentation.add(guiState.segmentation, "maskBlurAmount").min(0).max(20).step(1);
+      maskBackground = segmentation.add(guiState.segmentation, "maskBackground");
+    } else if (effectType === "bokeh") {
       if (darknessLevel) {
         darknessLevel.remove();
       }
@@ -31085,35 +31084,35 @@ function setupGui(cameras) {
         maskBackground.remove();
       }
 
-      bokehBlurAmount = segmentation.add(guiState.segmentation, 'backgroundBlurAmount').min(1).max(20).step(1);
-      edgeBlurAmount = segmentation.add(guiState.segmentation, 'edgeBlurAmount').min(0).max(20).step(1);
+      bokehBlurAmount = segmentation.add(guiState.segmentation, "backgroundBlurAmount").min(1).max(20).step(1);
+      edgeBlurAmount = segmentation.add(guiState.segmentation, "edgeBlurAmount").min(0).max(20).step(1);
     }
   }); // manually set the effect so that the options are shown.
 
   segmentationEffectController.setValue(guiState.segmentation.effect);
-  let partMap = gui.addFolder('Part Map');
-  partMap.add(guiState.partMap, 'segmentationThreshold', 0.0, 1.0);
-  partMap.add(guiState.partMap, 'effect', ['partMap', 'pixelation', 'blurBodyPart']);
-  partMap.add(guiState.partMap, 'opacity', 0.0, 1.0);
-  partMap.add(guiState.partMap, 'colorScale', Object.keys(partColorScales)).onChange(colorScale => {
+  let partMap = gui.addFolder("Part Map");
+  partMap.add(guiState.partMap, "segmentationThreshold", 0.0, 1.0);
+  partMap.add(guiState.partMap, "effect", ["partMap", "pixelation", "blurBodyPart"]);
+  partMap.add(guiState.partMap, "opacity", 0.0, 1.0);
+  partMap.add(guiState.partMap, "colorScale", Object.keys(partColorScales)).onChange(colorScale => {
     setShownPartColorScales(colorScale);
   });
   setShownPartColorScales(guiState.partMap.colorScale);
-  partMap.add(guiState.partMap, 'blurBodyPartAmount').min(1).max(20).step(1);
-  partMap.add(guiState.partMap, 'bodyPartEdgeBlurAmount').min(1).max(20).step(1);
+  partMap.add(guiState.partMap, "blurBodyPartAmount").min(1).max(20).step(1);
+  partMap.add(guiState.partMap, "bodyPartEdgeBlurAmount").min(1).max(20).step(1);
   partMap.open();
   estimateController.onChange(function (estimationType) {
-    if (estimationType === 'segmentation') {
+    if (estimationType === "segmentation") {
       segmentation.open();
       partMap.close();
-      document.getElementById('colors').style.display = 'none';
+      document.getElementById("colors").style.display = "none";
     } else {
       segmentation.close();
       partMap.open();
-      document.getElementById('colors').style.display = 'inline-block';
+      document.getElementById("colors").style.display = "inline-block";
     }
   });
-  gui.add(guiState, 'showFps').onChange(showFps => {
+  gui.add(guiState, "showFps").onChange(showFps => {
     if (showFps) {
       document.body.appendChild(stats.dom);
     } else {
@@ -31123,14 +31122,14 @@ function setupGui(cameras) {
 }
 
 function setShownPartColorScales(colorScale) {
-  const colors = document.getElementById('colors');
-  colors.innerHTML = '';
+  const colors = document.getElementById("colors");
+  colors.innerHTML = "";
   const partColors = partColorScales[colorScale];
   const partNames = bodyPix.PART_CHANNELS;
 
   for (let i = 0; i < partColors.length; i++) {
     const partColor = partColors[i];
-    const child = document.createElement('li');
+    const child = document.createElement("li");
     child.innerHTML = `
         <div class='color' style='background-color:rgb(${partColor[0]},${partColor[1]},${partColor[2]})' ></div>
         ${partNames[i]}`;
@@ -31154,7 +31153,7 @@ async function estimateSegmentation() {
   let multiPersonSegmentation = null;
 
   switch (guiState.algorithm) {
-    case 'multi-person-instance':
+    case "multi-person-instance":
       return await state.net.segmentMultiPerson(state.video, {
         internalResolution: guiState.input.internalResolution,
         segmentationThreshold: guiState.segmentation.segmentationThreshold,
@@ -31165,7 +31164,7 @@ async function estimateSegmentation() {
         refineSteps: guiState.multiPersonDecoding.refineSteps
       });
 
-    case 'person':
+    case "person":
       return await state.net.segmentPerson(state.video, {
         internalResolution: guiState.input.internalResolution,
         segmentationThreshold: guiState.segmentation.segmentationThreshold,
@@ -31178,13 +31177,12 @@ async function estimateSegmentation() {
       break;
   }
 
-  ;
   return multiPersonSegmentation;
 }
 
 async function estimatePartSegmentation() {
   switch (guiState.algorithm) {
-    case 'multi-person-instance':
+    case "multi-person-instance":
       return await state.net.segmentMultiPersonParts(state.video, {
         internalResolution: guiState.input.internalResolution,
         segmentationThreshold: guiState.segmentation.segmentationThreshold,
@@ -31195,7 +31193,7 @@ async function estimatePartSegmentation() {
         refineSteps: guiState.multiPersonDecoding.refineSteps
       });
 
-    case 'person':
+    case "person":
       return await state.net.segmentPersonParts(state.video, {
         internalResolution: guiState.input.internalResolution,
         segmentationThreshold: guiState.segmentation.segmentationThreshold,
@@ -31208,7 +31206,6 @@ async function estimatePartSegmentation() {
       break;
   }
 
-  ;
   return multiPersonPartSegmentation;
 }
 
@@ -31329,7 +31326,7 @@ function segmentBodyInRealTime() {
     // if changing the model or the camera, wait a second for it to complete
     // then try again.
     if (state.changingArchitecture || state.changingMultiplier || state.changingCamera || state.changingStride || state.changingQuantBytes) {
-      console.log('load model...');
+      console.log("load model...");
       loadBodyPix();
       state.changingArchitecture = false;
       state.changingMultiplier = false;
@@ -31342,7 +31339,7 @@ function segmentBodyInRealTime() {
     const flipHorizontally = guiState.flipHorizontal;
 
     switch (guiState.estimate) {
-      case 'segmentation':
+      case "segmentation":
         const multiPersonSegmentation = await estimateSegmentation();
         const multiPersonPlaybackSegmentation = await estimatePlaybackSegmentation();
 
@@ -31370,7 +31367,7 @@ function segmentBodyInRealTime() {
             drawPoses(multiPersonSegmentation, flipHorizontally, ctx2);
             break;
 
-          case 'bokeh':
+          case "bokeh":
             bodyPix.drawBokehEffect(canvas, state.video, multiPersonSegmentation, +guiState.segmentation.backgroundBlurAmount, guiState.segmentation.edgeBlurAmount, flipHorizontally);
             bodyPix.drawBokehEffect(canvas2, state.playbackVideo, multiPersonSegmentation, +guiState.segmentation.backgroundBlurAmount, guiState.segmentation.edgeBlurAmount, flipHorizontally);
             break;
@@ -31388,18 +31385,18 @@ function segmentBodyInRealTime() {
         const maskBlurAmount = 0;
 
         switch (guiState.partMap.effect) {
-          case 'pixelation':
+          case "pixelation":
             const pixelCellWidth = 10.0;
             bodyPix.drawPixelatedMask(canvas, state.video, coloredPartImageData, guiState.partMap.opacity, maskBlurAmount, flipHorizontally, pixelCellWidth);
             bodyPix.drawPixelatedMask(canvas2, state.playbackVideo, coloredPartImageData2, guiState.partMap.opacity, maskBlurAmount, flipHorizontally, pixelCellWidth);
             break;
 
-          case 'partMap':
+          case "partMap":
             bodyPix.drawMask(canvas, state.video, coloredPartImageData, guiState.opacity, maskBlurAmount, flipHorizontally);
             bodyPix.drawMask(canvas2, state.playbackVideo, coloredPartImageData2, guiState.opacity, maskBlurAmount, flipHorizontally);
             break;
 
-          case 'blurBodyPart':
+          case "blurBodyPart":
             const blurBodyPartIds = [0, 1];
             bodyPix.blurBodyPart(canvas, state.video, multiPersonPartSegmentation, blurBodyPartIds, guiState.partMap.blurBodyPartAmount, guiState.partMap.edgeBlurAmount, flipHorizontally);
             bodyPix.blurBodyPart(canvas2, state.playbackVideo, multiPersonPartPlaybackSegmentation, blurBodyPartIds, guiState.partMap.blurBodyPartAmount, guiState.partMap.edgeBlurAmount, flipHorizontally);
@@ -31428,8 +31425,8 @@ function segmentBodyInRealTime() {
 async function bindPage() {
   // Load the BodyPix model weights with architecture 0.75
   await loadBodyPix();
-  document.getElementById('loading').style.display = 'none';
-  document.getElementById('main').style.display = 'inline-block';
+  document.getElementById("loading").style.display = "none";
+  document.getElementById("main").style.display = "inline-block";
   await loadVideo(guiState.camera);
   let cameras = await getVideoInputs();
   setupFPS();
