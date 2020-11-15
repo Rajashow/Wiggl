@@ -3,7 +3,6 @@ import * as bodyPix from "@tensorflow-models/body-pix";
 import React, { useRef, useEffect } from "react";
 // import takitaki from ".";
 
-let net = null;
 const Room = (props) => {
   const userVideo = useRef();
   const socketRef = useRef();
@@ -11,61 +10,66 @@ const Room = (props) => {
   const peerRef = useRef();
   const otherUser = useRef();
   const userStream = useRef();
+  let ran_once = false;
+  let net = null;
+  const OUTPUT_STRIDE = 16;
+  const SEGMENTATION_THRESHOLD = 0.1;
+  const RAINBOW = [
+    [110, 64, 170],
+    [106, 72, 183],
+    [100, 81, 196],
+    [92, 91, 206],
+    [84, 101, 214],
+    [75, 113, 221],
+    [66, 125, 224],
+    [56, 138, 226],
+    [48, 150, 224],
+    [40, 163, 220],
+    [33, 176, 214],
+    [29, 188, 205],
+    [26, 199, 194],
+    [26, 210, 182],
+    [28, 219, 169],
+    [33, 227, 155],
+    [41, 234, 141],
+    [51, 240, 128],
+    [64, 243, 116],
+    [79, 246, 105],
+    [96, 247, 97],
+    [115, 246, 91],
+    [134, 245, 88],
+    [155, 243, 88],
+  ];
+  const pixelCellWidth = 10.0;
 
-  const canvas1 = <canvas id="c2" />;
+  const canvas1 = <canvas id="c1" />;
+  const canvas2 = <canvas id="c2" />;
+  const canvas3 = <canvas id="c3" />;
+
+  const v1 = (
+    <video style={{ display: "none" }} id="me" autoPlay ref={userVideo} />
+  );
+  const v2 = (
+    <video style={{ display: "none" }} id="other" autoPlay ref={partnerVideo} />
+  );
   const v3 = (
     <video
       autoPlay
-      id="hidden_vid"
-      src="https://i.imgur.com/sRqLSbt.mp4"
-      //   src="takitaki.mp4"
-      //   src="https://www.w3schools.com/html/mov_bbb.mp4"
+      loop
+      id="dance_hidden"
+      src="https://i.imgur.com/MCB77Uw.mp4"
+      style={{ display: "none" }}
       crossOrigin="Anonymous"
     />
   );
-  const v1 = <video autoPlay ref={userVideo} />;
-  const v2 = <video autoPlay ref={partnerVideo} />;
-  //   const net = bodyPix.load();
-
-  async function draw(playbackVideo, canvas, opacity) {
+  async function drawDance(playbackVideo, canvas, opacity) {
     playbackVideo.play();
-    const OUTPUT_STRIDE = 16;
-    const SEGMENTATION_THRESHOLD = 0.5;
-    const RAINBOW = [
-      [110, 64, 170],
-      [106, 72, 183],
-      [100, 81, 196],
-      [92, 91, 206],
-      [84, 101, 214],
-      [75, 113, 221],
-      [66, 125, 224],
-      [56, 138, 226],
-      [48, 150, 224],
-      [40, 163, 220],
-      [33, 176, 214],
-      [29, 188, 205],
-      [26, 199, 194],
-      [26, 210, 182],
-      [28, 219, 169],
-      [33, 227, 155],
-      [41, 234, 141],
-      [51, 240, 128],
-      [64, 243, 116],
-      [79, 246, 105],
-      [96, 247, 97],
-      [115, 246, 91],
-      [134, 245, 88],
-      [155, 243, 88],
-    ];
-    // if (net != null) {
-    net = await bodyPix.load();
-    // }
+
     const partSegment = await net.segmentPersonParts(
       playbackVideo,
       OUTPUT_STRIDE,
       SEGMENTATION_THRESHOLD
     );
-    const pixelCellWidth = 10.0;
 
     const colorParts = bodyPix.toColoredPartMask(partSegment, RAINBOW);
     bodyPix.drawPixelatedMask(
@@ -77,13 +81,6 @@ const Room = (props) => {
       true,
       pixelCellWidth
     );
-    // bodyPix.drawMask(canvas, playbackVideo, colorParts, opacity);
-  }
-  function callUser(userID) {
-    peerRef.current = createPeer(userID);
-    userStream.current
-      .getTracks()
-      .forEach((track) => peerRef.current.addTrack(track, userStream.current));
   }
 
   function createPeer(userID) {
@@ -176,106 +173,70 @@ const Room = (props) => {
   function handleTrackEvent(e) {
     partnerVideo.current.srcObject = e.streams[0];
   }
+  function callUser(userID) {
+    peerRef.current = createPeer(userID);
+    userStream.current
+      .getTracks()
+      .forEach((track) => peerRef.current.addTrack(track, userStream.current));
+  }
   useEffect(() => {
-    navigator.mediaDevices
-      .getUserMedia({ audio: true, video: true })
-      .then((stream) => {
-        userVideo.current.srcObject = stream;
-        userStream.current = stream;
+    bodyPix.load().then((net_) => {
+      net = net_;
+      navigator.mediaDevices
+        .getUserMedia({ audio: true, video: true })
+        .then((stream) => {
+          userVideo.current.srcObject = stream;
+          userStream.current = stream;
 
-        socketRef.current = io.connect("/");
-        socketRef.current.emit("join room", props.match.params.roomID);
+          socketRef.current = io.connect("/");
+          socketRef.current.emit("join room", props.match.params.roomID);
 
-        socketRef.current.on("other user", (userID) => {
-          callUser(userID);
-          otherUser.current = userID;
+          socketRef.current.on("other user", (userID) => {
+            callUser(userID);
+            otherUser.current = userID;
+          });
+
+          socketRef.current.on("user joined", (userID) => {
+            otherUser.current = userID;
+          });
+
+          socketRef.current.on("offer", handleReceiveCall);
+
+          socketRef.current.on("answer", handleAnswer);
+
+          socketRef.current.on("ice-candidate", handleNewICECandidateMsg);
         });
 
-        socketRef.current.on("user joined", (userID) => {
-          otherUser.current = userID;
-        });
-
-        socketRef.current.on("offer", handleReceiveCall);
-
-        socketRef.current.on("answer", handleAnswer);
-
-        socketRef.current.on("ice-candidate", handleNewICECandidateMsg);
-      });
-
-    var playbackVideo = document.getElementById("hidden_vid");
-    // playbackVideo.style.display = "none";
-    playbackVideo.width = 640;
-    playbackVideo.height = 480;
-    var refreshID = null;
-    playbackVideo.onloadeddata = function () {
-      refreshID = setInterval(function () {
-        draw(playbackVideo, document.getElementById("c2"), 0.7);
-      }, 100);
-    };
-    playbackVideo.addEventListener(
-      "ended",
-      () => {
-        clearInterval(refreshID);
-      },
-      false
-    );
-    // extractFramesFromVideo("https://i.imgur.com/sRqLSbt.mp4");
+      let init_video = (vid) => {
+        vid.pause();
+        vid.width = 640;
+        vid.height = 480;
+      };
+      if (!ran_once) {
+        ran_once = true;
+        setInterval(function () {
+          var mePlaybackVideo = document.getElementById("me");
+          var otherPlaybackVideo = document.getElementById("other");
+          var dancePlaybackVideo = document.getElementById("dance_hidden");
+          init_video(dancePlaybackVideo);
+          let opacity = 1;
+          if (mePlaybackVideo.readyState === 4) {
+            drawDance(mePlaybackVideo, document.getElementById("c1"), opacity);
+          }
+          drawDance(dancePlaybackVideo, document.getElementById("c2"), opacity);
+        }, 200);
+      }
+    });
   }, []);
 
-  //   async function extractFramesFromVideo(videoUrl, fps = 1) {
-  //     return new Promise(async (resolve) => {
-  //       // fully download it first (no buffering):
-  //       let videoBlob = await fetch(videoUrl).then((r) => r.blob());
-  //       let videoObjectUrl = URL.createObjectURL(videoBlob);
-  //       let hiddenv1 = document.createElement("video");
-  //       let seekResolve;
-  //       hiddenv1.addEventListener("seeked", async function () {
-  //         if (seekResolve) seekResolve();
-  //       });
-
-  //       hiddenv1.src = videoObjectUrl;
-
-  //       // workaround chromium metadata bug (https://stackoverflow.com/q/38062864/993683)
-  //       while (
-  //         (hiddenv1.duration === Infinity || isNaN(hiddenv1.duration)) &&
-  //         hiddenv1.readyState < 2
-  //       ) {
-  //         await new Promise((r) => setTimeout(r, 1000));
-  //         hiddenv1.currentTime = 10000000 * Math.random();
-  //       }
-  //       let duration = hiddenv1.duration;
-  //       let canvas = document.getElementById("c2");
-  //       let context = canvas.getContext("2d");
-  //       let [w, h] = [hiddenv1.videoWidth, hiddenv1.videoHeight];
-  //       canvas.width = w;
-  //       canvas.height = h;
-
-  //       let frames = [];
-  //       let interval = 1 / fps;
-  //       let currentTime = 0;
-
-  //       while (currentTime < duration) {
-  //         hiddenv1.currentTime = currentTime;
-  //         await new Promise((r) => (seekResolve = r));
-
-  //         context.drawImage(hiddenv1, 0, 0, w, h);
-  //         const newImg = document.getElementById("bob");
-  //         // newImg.src = canvas.toDataURL();
-  //         draw(newImg, canvas, 0.7);
-  //         let base64ImageData = canvas.toDataURL();
-  //         frames.push(base64ImageData);
-
-  //         currentTime += interval;
-  //       }
-  //       resolve(frames);
-  //     });
-  //   }
   return (
     <div>
       {v1}
       {v2}
       {v3}
       {canvas1}
+      {canvas2}
+      {canvas3}
     </div>
   );
 };
