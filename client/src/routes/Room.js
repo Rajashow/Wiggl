@@ -62,6 +62,7 @@ const Room = (props) => {
       loop
       id="dance_hidden"
       src="https://i.imgur.com/MCB77Uw.mp4"
+      // src = "https://imgur.com/8BvqGdm.mp4"
       style={{ display: "none" }}
       crossOrigin="Anonymous"
     />
