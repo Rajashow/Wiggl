@@ -31320,7 +31320,7 @@ async function loadBodyPix() {
 
 function segmentBodyInRealTime() {
   const canvas = document.getElementById('output');
-  const canvas2 = document.getElementById('output2'); // since images are being fed from a webcam
+  const canvas2 = document.getElementById('output2'); // since images are being fed from a webcam and video feed
 
   async function bodySegmentationFrame() {
     // if changing the model or the camera, wait a second for it to complete
@@ -31364,12 +31364,12 @@ function segmentBodyInRealTime() {
             bodyPix.drawMask(canvas, state.video, mask, guiState.segmentation.opacity, guiState.segmentation.maskBlurAmount, flipHorizontally);
             bodyPix.drawMask(canvas2, state.playbackVideo, mask2, guiState.segmentation.opacity, guiState.segmentation.maskBlurAmount, flipHorizontally);
             drawPoses(multiPersonSegmentation, flipHorizontally, ctx);
-            drawPoses(multiPersonSegmentation, flipHorizontally, ctx2);
+            drawPoses(multiPersonPlaybackSegmentation, flipHorizontally, ctx2);
             break;
 
           case "bokeh":
             bodyPix.drawBokehEffect(canvas, state.video, multiPersonSegmentation, +guiState.segmentation.backgroundBlurAmount, guiState.segmentation.edgeBlurAmount, flipHorizontally);
-            bodyPix.drawBokehEffect(canvas2, state.playbackVideo, multiPersonSegmentation, +guiState.segmentation.backgroundBlurAmount, guiState.segmentation.edgeBlurAmount, flipHorizontally);
+            bodyPix.drawBokehEffect(canvas2, state.playbackVideo, multiPersonPlaybackSegmentation, +guiState.segmentation.backgroundBlurAmount, guiState.segmentation.edgeBlurAmount, flipHorizontally);
             break;
         }
 
