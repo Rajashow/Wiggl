@@ -1,49 +1,27 @@
-import React from "react";
-
 import io from "socket.io-client";
 import * as bodyPix from "@tensorflow-models/body-pix";
-// import { op } from "@tensorflow/tfjs-core";
+import React, { useRef, useEffect } from "react";
 
-class Room extends React.Component {
-  constructor(props) {
-    super(props);
-    // const mobileNetMultiplier = 0.5;
-    // const outputStride = 16;
-
-    // const pixelCellWidth = 10.0;
-
-    // bodyPix.drawPixelatedMask(
-    //   canvas,
-    //   state.video,
-    //   coloredPartImageData,
-    //   guiState.partMap.opacity,
-    //   maskBlurAmount,
-    //   flipHorizontally,
-    //   pixelCellWidth
-    // );
-    this.state = {
-      userVideo: React.createRef(),
-      partnerVideo: React.createRef(),
-      peerRef: React.createRef(),
-      socketRef: React.createRef(),
-      otherUser: React.createRef(),
-      userStream: React.createRef(),
-      net: bodyPix.load(),
-    };
-  }
-
-  async getPartSegmentation(img) {
+const Room = (props) => {
+  const userVideo = useRef();
+  const partnerVideo = useRef();
+  const peerRef = useRef();
+  const socketRef = useRef();
+  const otherUser = useRef();
+  const userStream = useRef();
+  const net = bodyPix.load();
+  async function getPartSegmentation(img) {
     const OUTPUT_STRIDE = 16;
     const SEGMENTATION_THRESHOLD = 0.5;
 
-    return this.state.net.estimatePartSegmentation(
+    return net.estimatePartSegmentation(
       img,
       OUTPUT_STRIDE,
       SEGMENTATION_THRESHOLD
     );
   }
 
-  getColoredParts(partSegmentation) {
+  function getColoredParts(partSegmentation) {
     const RAINBOW = [
       [110, 64, 170],
       [106, 72, 183],
@@ -70,79 +48,69 @@ class Room extends React.Component {
       [134, 245, 88],
       [155, 243, 88],
     ];
-    return this.state.net.toColoredPartImageData(partSegmentation, RAINBOW);
+    return net.toColoredPartImageData(partSegmentation, RAINBOW);
   }
 
-  drawColorOnCanvas(canvas, img, coloredPart, opacity) {
+  function drawColorOnCanvas(canvas, img, coloredPart, opacity) {
     bodyPix.drawMask(canvas, img, coloredPart, opacity);
   }
 
-  componentDidMount() {
-    navigator.mediaDevices
-      .getUserMedia({ audio: true, video: true })
-      .then((stream) => {
-        var temp_userVideo = { ...this.state.userVideo };
-        temp_userVideo.current.srcObject = stream;
-        this.setState({ userVideo: temp_userVideo });
-        //   this.state.userVideo.current.srcObject = stream;
+  async function extractFramesFromVideo(videoUrl, fps = 25) {
+    return new Promise(async (resolve) => {
+      // fully download it first (no buffering):
+      let videoBlob = await fetch(videoUrl).then((r) => r.blob());
+      let videoObjectUrl = URL.createObjectURL(videoBlob);
+      let video = document.createElement("video");
 
-        // this.state.userStream.current = stream;
-        var temp_userStream = { ...this.state.userStream };
-        temp_userStream.current = stream;
-        this.setState({ userStream: temp_userStream });
-        //this.state.socketRef.current = io.connect("/");
-        var temp_socketRef = { ...this.state.socketRef };
-        temp_socketRef.current = io.connect("/");
-        this.setState({ socketRef: temp_socketRef });
-
-        this.state.socketRef.current.emit(
-          "join room",
-          this.props.match.params.roomID
-        );
-
-        this.state.socketRef.current.on("other user", (userID) => {
-          this.callUser(userID);
-          //this.state.otherUser.current = userID;
-          var temp_otherUser = { ...this.state.otherUser };
-          temp_otherUser.current = userID;
-          this.setState({ otherUser: temp_otherUser });
-        });
-
-        this.state.socketRef.current.on("user joined", (userID) => {
-          //this.state.otherUser.current = userID;
-          var temp_otherUser = { ...this.state.otherUser };
-          temp_otherUser.current = userID;
-          this.setState({ otherUser: temp_otherUser });
-        });
-
-        this.state.socketRef.current.on("offer", this.handleReceiveCall);
-
-        this.state.socketRef.current.on("answer", this.handleAnswer);
-
-        this.state.socketRef.current.on(
-          "ice-candidate",
-          this.handleNewICECandidateMsg
-        );
+      let seekResolve;
+      video.addEventListener("seeked", async function () {
+        if (seekResolve) seekResolve();
       });
+
+      video.src = videoObjectUrl;
+
+      // workaround chromium metadata bug (https://stackoverflow.com/q/38062864/993683)
+      while (
+        (video.duration === Infinity || isNaN(video.duration)) &&
+        video.readyState < 2
+      ) {
+        await new Promise((r) => setTimeout(r, 1000));
+        video.currentTime = 10000000 * Math.random();
+      }
+      let duration = video.duration;
+
+      let canvas = document.createElement("canvas");
+      let context = canvas.getContext("2d");
+      let [w, h] = [video.videoWidth, video.videoHeight];
+      canvas.width = w;
+      canvas.height = h;
+
+      let frames = [];
+      let interval = 1 / fps;
+      let currentTime = 0;
+
+      while (currentTime < duration) {
+        video.currentTime = currentTime;
+        await new Promise((r) => (seekResolve = r));
+
+        context.drawImage(video, 0, 0, w, h);
+        let base64ImageData = canvas.toDataURL();
+        frames.push(base64ImageData);
+
+        currentTime += interval;
+      }
+      resolve(frames);
+    });
   }
 
-  callUser(userID) {
-    //this.state.peerRef.current = this.createPeer(userID);
-    var temp_peerRef = { ...this.state.peerRef };
-    temp_peerRef.current = this.createPeer(userID);
-    this.setState({ peerRef: temp_peerRef });
-
-    this.state.userStream.current
+  function callUser(userID) {
+    peerRef.current = createPeer(userID);
+    userStream.current
       .getTracks()
-      .forEach((track) =>
-        this.state.peerRef.current.addTrack(
-          track,
-          this.state.userStream.current
-        )
-      );
+      .forEach((track) => peerRef.current.addTrack(track, userStream.current));
   }
 
-  createPeer(userID) {
+  function createPeer(userID) {
     const peer = new RTCPeerConnection({
       iceServers: [
         {
@@ -156,109 +124,115 @@ class Room extends React.Component {
       ],
     });
 
-    peer.onicecandidate = this.handleICECandidateEvent;
-    peer.ontrack = this.handleTrackEvent;
-    peer.onnegotiationneeded = () => this.handleNegotiationNeededEvent(userID);
+    peer.onicecandidate = handleICECandidateEvent;
+    peer.ontrack = handleTrackEvent;
+    peer.onnegotiationneeded = () => handleNegotiationNeededEvent(userID);
 
     return peer;
   }
 
-  handleNegotiationNeededEvent(userID) {
-    this.state.peerRef.current
+  function handleNegotiationNeededEvent(userID) {
+    peerRef.current
       .createOffer()
       .then((offer) => {
-        return this.state.peerRef.current.setLocalDescription(offer);
+        return peerRef.current.setLocalDescription(offer);
       })
       .then(() => {
         const payload = {
           target: userID,
-          caller: this.state.socketRef.current.id,
-          sdp: this.state.peerRef.current.localDescription,
+          caller: socketRef.current.id,
+          sdp: peerRef.current.localDescription,
         };
-        this.state.socketRef.current.emit("offer", payload);
+        socketRef.current.emit("offer", payload);
       })
       .catch((e) => console.log(e));
   }
 
-  handleReceiveCall(incoming) {
-    //this.state.peerRef.current = this.createPeer();
-    var temp_peerRef = { ...this.state.peerRef };
-    temp_peerRef.current = this.createPeer();
-    this.setState({ peerRef: temp_peerRef });
+  function handleReceiveCall(incoming) {
+    peerRef.current = createPeer();
     const desc = new RTCSessionDescription(incoming.sdp);
-    this.state.peerRef.current
+    peerRef.current
       .setRemoteDescription(desc)
       .then(() => {
-        this.state.userStream.current
+        userStream.current
           .getTracks()
           .forEach((track) =>
-            this.state.peerRef.current.addTrack(
-              track,
-              this.state.userStream.current
-            )
+            peerRef.current.addTrack(track, userStream.current)
           );
       })
       .then(() => {
-        return this.state.peerRef.current.createAnswer();
+        return peerRef.current.createAnswer();
       })
       .then((answer) => {
-        return this.state.peerRef.current.setLocalDescription(answer);
+        return peerRef.current.setLocalDescription(answer);
       })
       .then(() => {
         const payload = {
           target: incoming.caller,
-          caller: this.state.socketRef.current.id,
-          sdp: this.state.peerRef.current.localDescription,
+          caller: socketRef.current.id,
+          sdp: peerRef.current.localDescription,
         };
-        this.state.socketRef.current.emit("answer", payload);
+        socketRef.current.emit("answer", payload);
       });
   }
 
-  handleAnswer(message) {
+  function handleAnswer(message) {
     const desc = new RTCSessionDescription(message.sdp);
-    this.state.peerRef.current
-      .setRemoteDescription(desc)
-      .catch((e) => console.log(e));
+    peerRef.current.setRemoteDescription(desc).catch((e) => console.log(e));
   }
 
-  handleICECandidateEvent(state) {
-    return (e) => {
-      if (e.candidate) {
-        console.log(e);
-        console.log(this);
-        const payload = {
-          target: state.otherUser.current,
-          candidate: e.candidate,
-        };
-        state.socketRef.current.emit("ice-candidate", payload);
-      }
-    };
+  function handleICECandidateEvent(e) {
+    if (e.candidate) {
+      const payload = {
+        target: otherUser.current,
+        candidate: e.candidate,
+      };
+      socketRef.current.emit("ice-candidate", payload);
+    }
   }
 
-  handleNewICECandidateMsg(incoming) {
+  function handleNewICECandidateMsg(incoming) {
     const candidate = new RTCIceCandidate(incoming);
 
-    this.state.peerRef.current
-      .addIceCandidate(candidate)
-      .catch((e) => console.log(e));
+    peerRef.current.addIceCandidate(candidate).catch((e) => console.log(e));
   }
 
-  handleTrackEvent(e) {
-    //   double check this
-    // this.state.partnerVideo.current.srcObject = e.streams[0];
-    var temp_partnerVideo = { ...this.state.partnerVideo };
-    temp_partnerVideo.current = e.streams[0];
-    this.setState({ partnerVideo: temp_partnerVideo });
+  function handleTrackEvent(e) {
+    partnerVideo.current.srcObject = e.streams[0];
   }
+  useEffect(() => {
+    navigator.mediaDevices
+      .getUserMedia({ audio: true, video: true })
+      .then((stream) => {
+        userVideo.current.srcObject = stream;
+        userStream.current = stream;
 
-  render() {
-    return (
-      <div>
-        <video autoPlay ref={this.state.userVideo} />
-        <video autoPlay ref={this.state.partnerVideo} />
-      </div>
-    );
-  }
-}
+        socketRef.current = io.connect("/");
+        socketRef.current.emit("join room", props.match.params.roomID);
+
+        socketRef.current.on("other user", (userID) => {
+          callUser(userID);
+          otherUser.current = userID;
+        });
+
+        socketRef.current.on("user joined", (userID) => {
+          otherUser.current = userID;
+        });
+
+        socketRef.current.on("offer", handleReceiveCall);
+
+        socketRef.current.on("answer", handleAnswer);
+
+        socketRef.current.on("ice-candidate", handleNewICECandidateMsg);
+      });
+  }, []);
+
+  return (
+    <div>
+      <video autoPlay ref={userVideo} />
+      <video autoPlay ref={partnerVideo} />
+    </div>
+  );
+};
 
 export default Room;
