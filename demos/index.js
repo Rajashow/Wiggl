@@ -21,10 +21,14 @@ import Stats from 'stats.js';
 import {drawKeypoints, drawSkeleton, toggleLoadingUI, TRY_RESNET_BUTTON_NAME, TRY_RESNET_BUTTON_TEXT, updateTryResNetButtonDatGuiCss} from './demo_util';
 import * as partColorScales from './part_color_scales';
 
-
+// Dimensions for mask (video needs to match these)
+const maxVideoWidth = 640;
+const maxVideoHeight = 480;
+const canvasSize = 400;
 const stats = new Stats();
 
 const state = {
+  playbackVideo: null,
   video: null,
   stream: null,
   net: null,
@@ -110,6 +114,15 @@ async function getConstraints(cameraLabel) {
   return {deviceId, facingMode};
 }
 
+function stopExistingVideoFeedCapture() {
+  if (state.playbackVideo && state.playbackVideo.srcObject) {
+    state.video.srcObject.getTracks().forEach(track => {
+      track.stop();
+    })
+    state.video.srcObject = null;
+  }
+}
+
 /**
  * Loads a the camera to be used in the demo
  *
@@ -141,6 +154,7 @@ async function setupCamera(cameraLabel) {
 
 async function loadVideo(cameraLabel) {
   try {
+    //document.getElementById('video2')
     state.video = await setupCamera(cameraLabel);
   } catch (e) {
     let info = document.getElementById('info');
@@ -150,7 +164,21 @@ async function loadVideo(cameraLabel) {
     throw e;
   }
 
+  try {
+    var playbackVideo = document.getElementById('video2')//await setupPlaybackVideo();
+    playbackVideo.width = maxVideoWidth;
+    playbackVideo.height = maxVideoHeight;
+    state.playbackVideo = playbackVideo;
+    
+  } catch (e) {
+    let info = document.getElementById('info');
+    info.textContent = 'Trying to initialize playback video, but exception thrown';
+    info.style.display = 'block';
+    throw e;
+  }
+
   state.video.play();
+  state.playbackVideo.play();
 }
 
 const defaultQuantBytes = 2;
@@ -569,6 +597,61 @@ async function estimatePartSegmentation() {
   return multiPersonPartSegmentation;
 }
 
+async function estimatePlaybackSegmentation() {
+  let multiPersonSegmentation = null;
+  switch (guiState.algorithm) {
+    case 'multi-person-instance':
+      return await state.net.segmentMultiPerson(state.playbackVideo, {
+        internalResolution: guiState.input.internalResolution,
+        segmentationThreshold: guiState.segmentation.segmentationThreshold,
+        maxDetections: guiState.multiPersonDecoding.maxDetections,
+        scoreThreshold: guiState.multiPersonDecoding.scoreThreshold,
+        nmsRadius: guiState.multiPersonDecoding.nmsRadius,
+        numKeypointForMatching:
+            guiState.multiPersonDecoding.numKeypointForMatching,
+        refineSteps: guiState.multiPersonDecoding.refineSteps
+      });
+    case 'person':
+      return await state.net.segmentPerson(state.playbackVideo, {
+        internalResolution: guiState.input.internalResolution,
+        segmentationThreshold: guiState.segmentation.segmentationThreshold,
+        maxDetections: guiState.multiPersonDecoding.maxDetections,
+        scoreThreshold: guiState.multiPersonDecoding.scoreThreshold,
+        nmsRadius: guiState.multiPersonDecoding.nmsRadius,
+      });
+    default:
+      break;
+  };
+  return multiPersonSegmentation;
+}
+
+async function estimatePlaybackPartSegmentation() {
+  switch (guiState.algorithm) {
+    case 'multi-person-instance':
+      return await state.net.segmentMultiPersonParts(state.playbackVideo, {
+        internalResolution: guiState.input.internalResolution,
+        segmentationThreshold: guiState.segmentation.segmentationThreshold,
+        maxDetections: guiState.multiPersonDecoding.maxDetections,
+        scoreThreshold: guiState.multiPersonDecoding.scoreThreshold,
+        nmsRadius: guiState.multiPersonDecoding.nmsRadius,
+        numKeypointForMatching:
+            guiState.multiPersonDecoding.numKeypointForMatching,
+        refineSteps: guiState.multiPersonDecoding.refineSteps
+      });
+    case 'person':
+      return await state.net.segmentPersonParts(state.playbackVideo, {
+        internalResolution: guiState.input.internalResolution,
+        segmentationThreshold: guiState.segmentation.segmentationThreshold,
+        maxDetections: guiState.multiPersonDecoding.maxDetections,
+        scoreThreshold: guiState.multiPersonDecoding.scoreThreshold,
+        nmsRadius: guiState.multiPersonDecoding.nmsRadius,
+      });
+    default:
+      break;
+  };
+  return multiPersonPartSegmentation;
+}
+
 function drawPoses(personOrPersonPartSegmentation, flipHorizontally, ctx) {
   if (Array.isArray(personOrPersonPartSegmentation)) {
     personOrPersonPartSegmentation.forEach(personSegmentation => {
@@ -606,8 +689,15 @@ async function loadBodyPix() {
  * Feeds an image to BodyPix to estimate segmentation - this is where the
  * magic happens. This function loops with a requestAnimationFrame method.
  */
+/** 
+ * In order to get a skeleton on two video feeds, we had to do everything twice.
+ * In the second set of instructions we had to make sure that all of the code used the inteded video feed.
+ * A lot of the functions called were all pre-written to only deal with the original webcam video feed,
+ * so just had to make a bunch o
+ */
 function segmentBodyInRealTime() {
   const canvas = document.getElementById('output');
+  const canvas2 = document.getElementById('output2');
   // since images are being fed from a webcam
 
   async function bodySegmentationFrame() {
@@ -632,23 +722,36 @@ function segmentBodyInRealTime() {
     switch (guiState.estimate) {
       case 'segmentation':
         const multiPersonSegmentation = await estimateSegmentation();
+        const multiPersonPlaybackSegmentation = await estimatePlaybackSegmentation();
         switch (guiState.segmentation.effect) {
           case 'mask':
             const ctx = canvas.getContext('2d');
+            const ctx2 = canvas2.getContext('2d');
             const foregroundColor = {r: 255, g: 255, b: 255, a: 255};
             const backgroundColor = {r: 0, g: 0, b: 0, a: 255};
             const mask = bodyPix.toMask(
                 multiPersonSegmentation, foregroundColor, backgroundColor,
                 true);
+            const mask2 = bodyPix.toMask(
+                multiPersonPlaybackSegmentation, foregroundColor, backgroundColor,
+                true);
 
             bodyPix.drawMask(
                 canvas, state.video, mask, guiState.segmentation.opacity,
                 guiState.segmentation.maskBlurAmount, flipHorizontally);
+            bodyPix.drawMask(
+                canvas2, state.playbackVideo, mask2, guiState.segmentation.opacity,
+                guiState.segmentation.maskBlurAmount, flipHorizontally);
             drawPoses(multiPersonSegmentation, flipHorizontally, ctx);
+            drawPoses(multiPersonSegmentation, flipHorizontally, ctx2);
             break;
           case 'bokeh':
             bodyPix.drawBokehEffect(
                 canvas, state.video, multiPersonSegmentation,
+                +guiState.segmentation.backgroundBlurAmount,
+                guiState.segmentation.edgeBlurAmount, flipHorizontally);
+            bodyPix.drawBokehEffect(
+                canvas2, state.playbackVideo, multiPersonSegmentation,
                 +guiState.segmentation.backgroundBlurAmount,
                 guiState.segmentation.edgeBlurAmount, flipHorizontally);
             break;
@@ -657,10 +760,16 @@ function segmentBodyInRealTime() {
         break;
       case 'partmap':
         const ctx = canvas.getContext('2d');
+        const ctx2 = canvas2.getContext('2d');
         const multiPersonPartSegmentation = await estimatePartSegmentation();
+        const multiPersonPartPlaybackSegmentation = await estimatePlaybackPartSegmentation();
         const coloredPartImageData = bodyPix.toColoredPartMask(
             multiPersonPartSegmentation,
             partColorScales[guiState.partMap.colorScale]);
+        const coloredPartImageData2 = bodyPix.toColoredPartMask(
+          multiPersonPartPlaybackSegmentation,
+            partColorScales[guiState.partMap.colorScale]);
+      
 
         const maskBlurAmount = 0;
         switch (guiState.partMap.effect) {
@@ -671,10 +780,17 @@ function segmentBodyInRealTime() {
                 canvas, state.video, coloredPartImageData,
                 guiState.partMap.opacity, maskBlurAmount, flipHorizontally,
                 pixelCellWidth);
+            bodyPix.drawPixelatedMask(
+                canvas2, state.playbackVideo, coloredPartImageData2,
+                guiState.partMap.opacity, maskBlurAmount, flipHorizontally,
+                pixelCellWidth);
             break;
           case 'partMap':
             bodyPix.drawMask(
                 canvas, state.video, coloredPartImageData, guiState.opacity,
+                maskBlurAmount, flipHorizontally);
+            bodyPix.drawMask(
+                canvas2, state.playbackVideo, coloredPartImageData2, guiState.opacity,
                 maskBlurAmount, flipHorizontally);
             break;
           case 'blurBodyPart':
@@ -683,8 +799,13 @@ function segmentBodyInRealTime() {
                 canvas, state.video, multiPersonPartSegmentation,
                 blurBodyPartIds, guiState.partMap.blurBodyPartAmount,
                 guiState.partMap.edgeBlurAmount, flipHorizontally);
+            bodyPix.blurBodyPart(
+                canvas2, state.playbackVideo, multiPersonPartPlaybackSegmentation,
+                blurBodyPartIds, guiState.partMap.blurBodyPartAmount,
+                guiState.partMap.edgeBlurAmount, flipHorizontally);
         }
         drawPoses(multiPersonPartSegmentation, flipHorizontally, ctx);
+        drawPoses(multiPersonPartPlaybackSegmentation, flipHorizontally, ctx2);
         break;
       default:
         break;
@@ -705,6 +826,7 @@ function segmentBodyInRealTime() {
 export async function bindPage() {
   // Load the BodyPix model weights with architecture 0.75
   await loadBodyPix();
+
   document.getElementById('loading').style.display = 'none';
   document.getElementById('main').style.display = 'inline-block';
 
